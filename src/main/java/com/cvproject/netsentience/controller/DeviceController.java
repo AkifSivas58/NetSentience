@@ -1,7 +1,10 @@
 package com.cvproject.netsentience.controller;
 
+import com.cvproject.netsentience.dto.DeviceUptimeDTO;
 import com.cvproject.netsentience.model.Device;
 import com.cvproject.netsentience.repository.DeviceRepository;
+import com.cvproject.netsentience.repository.MonitoringLogRepository;
+import com.cvproject.netsentience.service.NetworkMonitorService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,10 +15,16 @@ import java.util.List;
 public class DeviceController {
 
     private final DeviceRepository deviceRepository;
+    private final NetworkMonitorService networkService;
 
-    // Constructor Injection (Best Practice)
-    public DeviceController(DeviceRepository deviceRepository) {
+    public DeviceController(DeviceRepository deviceRepository, NetworkMonitorService networkService) {
         this.deviceRepository = deviceRepository;
+        this.networkService = networkService;
+    }
+
+    @GetMapping("/{id}/uptime")
+    public DeviceUptimeDTO getDeviceUptime(@PathVariable Long id){
+        return networkService.calculateUpTime(id);
     }
 
     // GET /api/devices - List all devices

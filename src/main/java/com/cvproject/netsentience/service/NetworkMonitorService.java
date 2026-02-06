@@ -1,5 +1,6 @@
 package com.cvproject.netsentience.service;
 
+import com.cvproject.netsentience.dto.DeviceUptimeDTO;
 import com.cvproject.netsentience.model.Device;
 import com.cvproject.netsentience.model.MonitoringLog;
 import com.cvproject.netsentience.repository.DeviceRepository;
@@ -42,6 +43,26 @@ public class NetworkMonitorService {
         }
 
         deviceRepository.saveAll(devices);
+    }
+
+    public DeviceUptimeDTO calculateUpTime(Long deviceId){
+        List<MonitoringLog> logs = logRepository.findByDeviceId(deviceId);
+
+        if (logs.isEmpty()){
+            return new DeviceUptimeDTO(deviceId, 0, 0, 0.0);
+        }
+
+        long totalChecks = logs.size();
+        long upCount = 0;
+        for (MonitoringLog log : logs){
+            if (log.isUp()){
+                upCount++;
+            }
+        }
+
+        double percentage = ((double) upCount / totalChecks) * 100;
+
+        return new DeviceUptimeDTO(deviceId, totalChecks, upCount, percentage);
     }
 
     private boolean ping(String ipAddress){
