@@ -1,9 +1,17 @@
+version: '3.8'
+
 services:
-  postgres:
-    image: 'postgres:latest'
+  db:
+    image: postgres:15
+    container_name: netsentience-db
     environment:
-      - 'POSTGRES_DB=mydatabase'
-      - 'POSTGRES_PASSWORD=secret'
-      - 'POSTGRES_USER=myuser'
+      POSTGRES_DB: netsentience
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: secretpassword
     ports:
-      - '5432'
+      - "5433:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:
