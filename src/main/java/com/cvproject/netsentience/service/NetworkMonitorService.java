@@ -1,7 +1,9 @@
 package com.cvproject.netsentience.service;
 
 import com.cvproject.netsentience.model.Device;
+import com.cvproject.netsentience.model.MonitoringLog;
 import com.cvproject.netsentience.repository.DeviceRepository;
+import com.cvproject.netsentience.repository.MonitoringLogRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -13,9 +15,11 @@ import java.time.LocalDateTime;
 @Service
 public class NetworkMonitorService {
     private final DeviceRepository deviceRepository;
+    private final MonitoringLogRepository logRepository;
 
-    public NetworkMonitorService(DeviceRepository deviceRepository){
+    public NetworkMonitorService(DeviceRepository deviceRepository, MonitoringLogRepository logRepository){
         this.deviceRepository = deviceRepository;
+        this.logRepository = logRepository;
     }
 
     @Scheduled(fixedRate = 10000)
@@ -25,11 +29,16 @@ public class NetworkMonitorService {
         for (Device device : devices){
             boolean isReachable = ping(device.getIpAddress());
 
+            // Update device status
             String newStatus = isReachable ? "UP" : "DOWN";
             device.setStatus(newStatus);
             device.setLastChecked(LocalDateTime.now());
 
-            System.out.println("Pinging " + device.getName() + " (" + device.getIpAddress() + ") -> " + newStatus);
+            // Save to history
+            MonitoringLog log = new MonitoringLog(device, isReachable, LocalDateTime.now());
+            logRepository.save(log);
+
+            System.out.println("Logged status for " + device.getName() + ": " + newStatus);
         }
 
         deviceRepository.saveAll(devices);
