@@ -2,6 +2,7 @@ package com.cvproject.netsentience.controller;
 
 import com.cvproject.netsentience.model.Device;
 import com.cvproject.netsentience.repository.DeviceRepository;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,7 +26,7 @@ public class DeviceController {
 
     // POST /api/devices - Create a new device
     @PostMapping
-    public Device createDevice(@RequestBody Device device) {
+    public Device createDevice(@Valid @RequestBody Device device) {
         return deviceRepository.save(device);
     }
 

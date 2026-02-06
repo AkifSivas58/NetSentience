@@ -1,6 +1,8 @@
 package com.cvproject.netsentience.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 import java.time.LocalDateTime;
 
@@ -14,9 +16,12 @@ public class Device {
     private Long id;
 
     @Column(nullable = false)
+    @NotBlank (message = "Device name is mandatory.")
     private String name;
 
     @Column(nullable = false, unique = true)
+    @NotBlank(message = "IP address is mandatory")
+    @Pattern(regexp = "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)\\.?\\b){4}$", message = "Invalid IP address format!")
     private String ipAddress;
 
     private String status;
