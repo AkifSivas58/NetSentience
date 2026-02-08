@@ -1,14 +1,13 @@
 # 🌐 NetSentience - High-Performance Network Monitoring System
 
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://www.java.com)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-green.svg)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-green.svg)](https://spring.io/projects/spring-boot)
 [![Docker](https://img.shields.io/badge/Docker-Enabled-blue.svg)](https://www.docker.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)]()
 
 **NetSentience** is a full-stack, multi-threaded network monitoring solution designed to track device uptime, manage NAT configurations, and analyze network health in real-time. Unlike standard CRUD apps, this system interacts directly with the host Operating System kernel to perform ICMP pings and utilizes asynchronous processing for high scalability.
 
-![Dashboard Screenshot](screenshots/dashboard-preview.png)
-*(Note: Replace this line with an actual screenshot of your new frontend!)*
+![Dashboard Screenshot](<img width="1568" height="864" alt="image" src="https://github.com/user-attachments/assets/c5e2cc53-0965-496d-ba56-eac1736e8bd5" />
+)
 
 ## 🚀 Key Features & Engineering
 
@@ -61,6 +60,3 @@ The system runs a scheduled task (Cron Job) every 10 seconds.
 3.  **Worker Threads** execute OS ping commands in parallel.
 4.  **Result Handler** updates the PostgreSQL database and appends a new log entry.
 5.  **Frontend** polls the REST API for real-time status updates via the DOM.
-
-## 📝 License
-This project is licensed under the MIT License.
