@@ -6,7 +6,8 @@
 
 **NetSentience** is a full-stack, multi-threaded network monitoring solution designed to track device uptime, manage NAT configurations, and analyze network health in real-time. Unlike standard CRUD apps, this system interacts directly with the host Operating System kernel to perform ICMP pings and utilizes asynchronous processing for high scalability.
 
-<img width="1568" height="864" alt="image" src="https://github.com/user-attachments/assets/03d70e3a-5b11-4f07-8081-a857d381d58b" />
+<img width="1396" height="871" alt="image" src="https://github.com/user-attachments/assets/c734583b-6d50-40ff-ac7c-98d8c09c7df1" />
+
 
 ## 🚀 Key Features & Engineering
 
