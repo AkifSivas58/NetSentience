@@ -16,7 +16,8 @@
         }
 
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #e0e7ff 0%, #f0f4ff 50%, #e0e7ff 100%);
+            background-size: 100% 100%;
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             padding: 20px;
@@ -132,6 +133,36 @@
             letter-spacing: 0.5px;
             color: #475569;
             border-bottom: 2px solid var(--border-color);
+            user-select: none;
+        }
+
+        .device-table th.sortable {
+            cursor: pointer;
+            position: relative;
+            transition: background-color 0.2s;
+        }
+
+        .device-table th.sortable:hover {
+            background-color: #e2e8f0;
+        }
+
+        .device-table th.sortable::after {
+            content: ' ↕';
+            opacity: 0.3;
+            font-size: 12px;
+            margin-left: 4px;
+        }
+
+        .device-table th.sortable.sort-asc::after {
+            content: ' ↑';
+            opacity: 1;
+            color: var(--primary-color);
+        }
+
+        .device-table th.sortable.sort-desc::after {
+            content: ' ↓';
+            opacity: 1;
+            color: var(--primary-color);
         }
 
         .device-table td {
@@ -346,12 +377,12 @@
                 <table class="table table-hover mb-0">
                     <thead>
                         <tr>
-                            <th style="width: 5%">ID</th>
+                            <th class="sortable" style="width: 5%" onclick="sortDevices('id')">ID</th>
                             <th style="width: 20%">Device Name</th>
-                            <th style="width: 15%">IP Address</th>
-                            <th style="width: 12%">Type</th>
-                            <th style="width: 12%">Status</th>
-                            <th style="width: 12%">Uptime (24h)</th>
+                            <th class="sortable" style="width: 15%" onclick="sortDevices('ip')">IP Address</th>
+                            <th class="sortable" style="width: 12%" onclick="sortDevices('type')">Type</th>
+                            <th class="sortable" style="width: 12%" onclick="sortDevices('status')">Status</th>
+                            <th class="sortable" style="width: 12%" onclick="sortDevices('uptime')">Uptime (24h)</th>
                             <th style="width: 14%">Last Checked</th>
                             <th style="width: 10%" class="text-end">Actions</th>
                         </tr>
@@ -477,6 +508,9 @@
         const API_BASE = '/api';
         let currentNatDeviceId = null;
         let refreshInterval = null;
+        let currentSortColumn = null;
+        let currentSortDirection = 'asc';
+        let devicesWithUptimeCache = [];
 
         const deviceModal = new bootstrap.Modal(document.getElementById('deviceModal'));
         const natModal = new bootstrap.Modal(document.getElementById('natModal'));
@@ -555,8 +589,151 @@
                 });
 
                 const devicesWithUptime = await Promise.all(devicePromises);
+                
+                // Cache devices for sorting
+                devicesWithUptimeCache = devicesWithUptime;
 
-                devicesWithUptime.forEach(({ device, uptime }) => {
+                // Apply current sort or default sort
+                if (currentSortColumn) {
+                    applySort(currentSortColumn, currentSortDirection);
+                } else {
+                    // Default sort: First by status (UP, DOWN, UNKNOWN), then by name alphabetically
+                    devicesWithUptimeCache.sort((a, b) => {
+                        const statusOrder = { 'UP': 1, 'DOWN': 2, 'UNKNOWN': 3, 'null': 4 };
+                        const statusA = a.device.status || 'null';
+                        const statusB = b.device.status || 'null';
+                        
+                        if (statusOrder[statusA] !== statusOrder[statusB]) {
+                            return statusOrder[statusA] - statusOrder[statusB];
+                        }
+                        
+                        const nameA = (a.device.name || '').toLowerCase();
+                        const nameB = (b.device.name || '').toLowerCase();
+                        return nameA.localeCompare(nameB);
+                    });
+                }
+
+                renderDevices();
+                updateSortIndicators();
+                document.getElementById('lastUpdate').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+            } catch (error) {
+                console.error('Error loading devices:', error);
+                document.getElementById('deviceTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center text-danger py-4">
+                            Error loading devices. Please refresh the page.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Sort devices function
+        function sortDevices(column) {
+            // Toggle direction if clicking the same column
+            if (currentSortColumn === column) {
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortColumn = column;
+                currentSortDirection = 'asc';
+            }
+
+            applySort(column, currentSortDirection);
+            updateSortIndicators();
+            renderDevices();
+        }
+
+        // Apply sorting logic
+        function applySort(column, direction) {
+            const multiplier = direction === 'asc' ? 1 : -1;
+
+            devicesWithUptimeCache.sort((a, b) => {
+                let comparison = 0;
+
+                switch(column) {
+                    case 'id':
+                        comparison = (a.device.id || 0) - (b.device.id || 0);
+                        break;
+                    case 'ip':
+                        const ipA = (a.device.ipAddress || '').split('.').map(n => parseInt(n) || 0);
+                        const ipB = (b.device.ipAddress || '').split('.').map(n => parseInt(n) || 0);
+                        for (let i = 0; i < 4; i++) {
+                            if (ipA[i] !== ipB[i]) {
+                                comparison = ipA[i] - ipB[i];
+                                break;
+                            }
+                        }
+                        if (comparison === 0) {
+                            comparison = (a.device.ipAddress || '').localeCompare(b.device.ipAddress || '');
+                        }
+                        break;
+                    case 'type':
+                        comparison = (a.device.type || '').toLowerCase().localeCompare((b.device.type || '').toLowerCase());
+                        break;
+                    case 'status':
+                        const statusOrder = { 'UP': 1, 'DOWN': 2, 'UNKNOWN': 3, 'null': 4 };
+                        const statusA = a.device.status || 'null';
+                        const statusB = b.device.status || 'null';
+                        comparison = (statusOrder[statusA] || 5) - (statusOrder[statusB] || 5);
+                        break;
+                    case 'uptime':
+                        comparison = (a.uptime || 0) - (b.uptime || 0);
+                        break;
+                    default:
+                        comparison = 0;
+                }
+
+                return comparison * multiplier;
+            });
+        }
+
+        // Update sort indicators in table headers
+        function updateSortIndicators() {
+            // Remove all sort classes
+            document.querySelectorAll('.device-table th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+
+            // Add sort class to current column
+            if (currentSortColumn) {
+                const headers = {
+                    'id': 0,
+                    'ip': 2,
+                    'type': 3,
+                    'status': 4,
+                    'uptime': 5
+                };
+                const headerIndex = headers[currentSortColumn];
+                if (headerIndex !== undefined) {
+                    const th = document.querySelectorAll('.device-table th.sortable')[headerIndex];
+                    if (th) {
+                        th.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+                    }
+                }
+            }
+        }
+
+        // Render devices to table
+        function renderDevices() {
+            const tbody = document.getElementById('deviceTableBody');
+            
+            if (devicesWithUptimeCache.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <div>No devices found. Add your first device to get started!</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = '';
+
+            devicesWithUptimeCache.forEach(({ device, uptime }) => {
                     const statusClass = getStatusClass(device.status);
                     const typeBadgeClass = getTypeBadgeClass(device.type);
                     const uptimeBadgeClass = getUptimeBadgeClass(uptime);
@@ -587,19 +764,7 @@
                             </td>
                         </tr>
                     `;
-                });
-
-                document.getElementById('lastUpdate').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
-            } catch (error) {
-                console.error('Error loading devices:', error);
-                document.getElementById('deviceTableBody').innerHTML = `
-                    <tr>
-                        <td colspan="8" class="text-center text-danger py-4">
-                            Error loading devices. Please refresh the page.
-                        </td>
-                    </tr>
-                `;
-            }
+            });
         }
 
         // Device Management
