@@ -32,6 +32,12 @@ public class NatController {
                 .orElseThrow(() -> new RuntimeException("Router not found"));
 
         rule.setDevice(router);
+
+        // Default protocol if missing
+        if (rule.getProtocol() == null || rule.getProtocol().isEmpty()) {
+            rule.setProtocol("TCP");
+        }
+
         return natRepository.save(rule);
     }
 
