@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetSentience Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .status-up { color: green; font-weight: bold; }
+        .status-down { color: red; font-weight: bold; }
+        .status-maintenance { color: orange; font-weight: bold; }
+        .status-unknown { color: gray; }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <h1 class="text-center mb-4">NetSentience Monitor</h1>
+
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            Add New Device
+        </div>
+        <div class="card-body">
+            <form id="addDeviceForm" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" id="deviceName" placeholder="Device Name (e.g. Main Router)" required>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" class="form-control" id="deviceIp" placeholder="IP Address (e.g. 192.168.1.1)" required>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="deviceType">
+                        <option value="Router">Router</option>
+                        <option value="Switch">Switch</option>
+                        <option value="Server">Server</option>
+                        <option value="PC">PC</option>
+                        <option value="IoT">IoT Device</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-success w-100">+</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <span>Network Status</span>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-striped table-hover mb-0">
+                <thead class="table-dark">
+                <tr>
+                    <th>Name</th>
+                    <th>IP Address</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Last Checked</th>
+                    <th>Action</th>
+                </tr>
+                </thead>
+                <tbody id="deviceTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = '/api/devices';
+
+    // 1. Function to Fetch and Display Devices
+    async function loadDevices() {
+        try {
+            const response = await fetch(API_URL);
+            const devices = await response.json();
+
+            const tableBody = document.getElementById('deviceTableBody');
+            tableBody.innerHTML = ''; // Clear current list
+
+            devices.forEach(device => {
+                const row = document.createElement('tr');
+
+                // Determine Status Color
+                let statusClass = 'status-unknown';
+                if (device.status === 'UP') statusClass = 'status-up';
+                if (device.status === 'DOWN') statusClass = 'status-down';
+                if (device.status === 'MAINTENANCE') statusClass = 'status-maintenance';
+
+                row.innerHTML = `
+                    <td>${device.name}</td>
+                    <td>${device.ipAddress}</td>
+                    <td><span class="badge bg-info text-dark">${device.type}</span></td>
+                    <td class="${statusClass}">${device.status || 'UNKNOWN'}</td>
+                    <td>${device.lastChecked ? new Date(device.lastChecked).toLocaleTimeString() : '-'}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="deleteDevice(${device.id})">Delete</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+        } catch (error) {
+            console.error('Error loading devices:', error);
+        }
+    }
+
+    // 2. Function to Add a Device
+    document.getElementById('addDeviceForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const device = {
+            name: document.getElementById('deviceName').value,
+            ipAddress: document.getElementById('deviceIp').value,
+            type: document.getElementById('deviceType').value
+        };
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(device)
+            });
+
+            if (response.ok) {
+                document.getElementById('addDeviceForm').reset();
+                loadDevices(); // Refresh list immediately
+            } else {
+                alert('Failed to add device. Check IP format!');
+            }
+        } catch (error) {
+            console.error('Error adding device:', error);
+        }
+    });
+
+    // 3. Function to Delete a Device
+    async function deleteDevice(id) {
+        if(!confirm('Are you sure you want to remove this device?')) return;
+
+        try {
+            await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            loadDevices(); // Refresh list
+        } catch (error) {
+            console.error('Error deleting device:', error);
+        }
+    }
+
+    // 4. Auto-Refresh every 5 seconds
+    loadDevices(); // Initial load
+    setInterval(loadDevices, 5000); // Refresh loop
+
+</script>
+
+</body>
+</html>
