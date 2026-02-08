@@ -39,9 +39,27 @@ public class DeviceController {
         return deviceRepository.save(device);
     }
 
-    // DELETE /api/devices/{id} - Remove a device
+    // DELETE /api/devices/{id}
     @DeleteMapping("/{id}")
     public void deleteDevice(@PathVariable Long id) {
         deviceRepository.deleteById(id);
     }
+
+
+    // PUT /api/devices/{id} - Update an existing device
+    @PutMapping("/{id}")
+    public Device updateDevice(@PathVariable Long id, @Valid @RequestBody Device deviceDetails){
+        System.out.println("RECEIVED UPDATE REQUEST: " + deviceDetails.getIpAddress());
+
+        Device device = deviceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Device not found"));
+
+        device.setName(deviceDetails.getName());
+        device.setIpAddress(device.getIpAddress());
+        device.setType(deviceDetails.getType());
+
+        // Note: We do NOT update 'status' here. The monitoring service does that.
+        return deviceRepository.save(device);
+    }
+
 }

@@ -24,26 +24,31 @@ public class NetworkMonitorService {
     }
 
     @Scheduled(fixedRate = 10000)
-    public void checkDevices(){
+    public void checkDevices() {
+        // Fetch all devices fresh from the DB
         List<Device> devices = deviceRepository.findAll();
 
-        for (Device device : devices){
+        for (Device device : devices) {
+            // 1. Ping
             boolean isReachable = ping(device.getIpAddress());
-
-            // Update device status
             String newStatus = isReachable ? "UP" : "DOWN";
+
+            // 2. Update DB
             device.setStatus(newStatus);
             device.setLastChecked(LocalDateTime.now());
+            deviceRepository.save(device);
 
-            // Save to history
-            MonitoringLog log = new MonitoringLog(device, isReachable, LocalDateTime.now());
+            // 3. Log History
+            MonitoringLog log = new MonitoringLog();
+            log.setDevice(device);
+            log.setUp(isReachable);
+            log.setCheckTime(LocalDateTime.now());
             logRepository.save(log);
 
-            System.out.println("Logged status for " + device.getName() + ": " + newStatus);
+            System.out.println("Checked " + device.getName() + " (" + device.getIpAddress() + ") -> " + newStatus);
         }
-
-        deviceRepository.saveAll(devices);
     }
+
 
     public DeviceUptimeDTO calculateUpTime(Long deviceId){
         List<MonitoringLog> logs = logRepository.findByDeviceId(deviceId);
@@ -65,14 +70,25 @@ public class NetworkMonitorService {
         return new DeviceUptimeDTO(deviceId, totalChecks, upCount, percentage);
     }
 
-    private boolean ping(String ipAddress){
-        try{
-            InetAddress address = InetAddress.getByName(ipAddress);
+    private boolean ping(String ipAddress) {
+        try {
+            // 1. Detect OS (Windows uses "-n", Linux/Mac uses "-c")
+            boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
+            String command = isWindows
+                    ? "ping -n 1 -w 1000 " + ipAddress  // Windows: 1 packet, 1000ms timeout
+                    : "ping -c 1 -W 1 " + ipAddress;    // Linux: 1 packet, 1 second timeout
 
-            // Timeout is set to 2 seconds
-            return address.isReachable(2000);
-        }
-        catch (IOException e){
+            // 2. Run the command in the terminal
+            Process process = Runtime.getRuntime().exec(command);
+
+            // 3. Wait for it to finish
+            int returnCode = process.waitFor();
+
+            // 4. Return true if exit code is 0 (Success)
+            return (returnCode == 0);
+
+        } catch (Exception e) {
+            System.out.println("Ping error: " + e.getMessage());
             return false;
         }
     }
