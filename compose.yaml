@@ -1,17 +1,38 @@
 version: '3.8'
 
 services:
+  app:
+    build: .
+    container_name: netsentience-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/netsentience
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=password
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    networks:
+      - net-network
+
   db:
     image: postgres:15
     container_name: netsentience-db
     environment:
       POSTGRES_DB: netsentience
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - net-network
+
+networks:
+  net-network:
+    driver: bridge
 
 volumes:
-  db-data:
+  postgres_data:
