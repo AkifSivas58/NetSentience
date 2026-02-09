@@ -73,7 +73,7 @@ public class DeviceController {
                 .orElseThrow(() -> new RuntimeException("Device not found"));
 
         device.setName(deviceDetails.getName());
-        device.setIpAddress(device.getIpAddress());
+        device.setIpAddress(deviceDetails.getIpAddress());
         device.setType(deviceDetails.getType());
 
         // Note: We do NOT update 'status' here. The monitoring service does that.
